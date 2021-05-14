@@ -657,11 +657,11 @@ GSDA.HeatmapAnnot<-function(contributions,maxGeneContribAtOneSide=3,width=unit(3
 			right<-names(contrib)[contrib>0]
 			left<-left[1:min(maxGeneContribAtOneSide,length(left))]
 			right<-right[max(1,(length(right)-maxGeneContribAtOneSide)+1):length(right)]
-			if(!is.na(left[1])){
+			if(!is.null(left[1])){
 				grid.text(paste0(left,collapse = "  "),just = "right",
 									x=4.5,y=i,default.units = "native",gp=gpar(fontsize=1/length(index)*fontsizeFactor,fontface="italic"))
 			}
-			if(!is.na(right[1])){
+			if(!is.null(right[1])){
 				grid.text(paste0(right,collapse = "  "),just = "left",
 									x=5.5,y=i,default.units = "native",gp=gpar(fontsize=1/length(index)*fontsizeFactor,fontface="italic"))
 			}
