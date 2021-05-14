@@ -202,6 +202,7 @@ pcaAddSamples<-function(pca,newSamplesMatrix,transpose=TRUE,combineMat=TRUE){
 
 
 PCR<-function(pca,annotationDF,nComponant=10){
+	require(reshape2)
 	annots<-colnames(annotationDF)
 	rSquaredMat<-matrixFromDimnames(cn(pca$x),annots,value = NA)
 	for(x in cn(pca$x)){
@@ -209,7 +210,7 @@ PCR<-function(pca,annotationDF,nComponant=10){
 			rSquaredMat[x,annot]<-summary(lm(formula(paste0(x,"~",annot)),data = data.frame(annotationDF[,annot,drop=F],pca$x[,x,drop=F])))$r.squared
 		}
 	}
-	retDt<-meltMatrix(rSquaredMat[1:nComponant,],metricName = "Rsquared",rowTitle = "PC",colTitle = "Annotation" )
+	retDt<-melt(rSquaredMat[1:nComponant,], value.name = "Rsquared",varnames=c("PC","Annotation"))
 	retDt$PC<-factor(retDt$PC,levels=cn(pca$x)[1:nComponant]) #so the levels of PCs are well ordered
 
 	retDt
