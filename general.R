@@ -40,7 +40,7 @@ fastWrite <- function(x, fileName = "default.tsv", headRow="Name",row.names=TRUE
 		x=cbind(rownames(x),x)
 		colnames(x)[1]<-headRow
 	}
-	fwrite(x=data.frame(x),file=fileName,sep="\t", row.names = FALSE, col.names = col.names, quote = FALSE, dec=dec,...)
+	fwrite(x=data.frame(x),file=fileName,sep=sep, row.names = FALSE, col.names = col.names, quote = FALSE, dec=dec,...)
 }
 
 

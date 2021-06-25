@@ -1361,3 +1361,39 @@ quickSCnorm<-function(rawCounts,returnLog=TRUE,sizeFactors=NULL,...){
 	scater::normalizeCounts(sce,log=returnLog,pseudo_count = 0,size_factors = sizeFactors(sce))
 }
 
+linkLevelsOf2vector<-function(vectorA,vectorB){
+	confusionMat<-table(vectorA,vectorB)
+	confusionMat<-matrix(confusionMat,nrow = nrow(confusionMat),dimnames = list(rn(confusionMat),cn(confusionMat)))
+	propMatA<- sweep(confusionMat,1,rowSums(confusionMat),"/")
+	propMatB<- sweep(confusionMat,2,colSums(confusionMat),"/")
+	propMatAB<-sweep(propMatA,2,colSums(propMatA),"/")
+	ODDratioMat=pvalMat=matrixFromDimnames(rownames(confusionMat),colnames(confusionMat),NA)
+	
+	for(levelOfA in 1:nrow(confusionMat)){
+		for(levelOfB in 1:ncol(confusionMat)){
+			nAB=confusionMat[levelOfA,levelOfB]
+			nAwB=sum(confusionMat[levelOfA,-levelOfB])
+			nBwA=sum(confusionMat[-levelOfA,levelOfB])
+			nW = sum(confusionMat[-levelOfA,-levelOfB])
+			
+			pvalMat[levelOfA,levelOfB]<-fisher.test(matrix(c(nAB,nAwB,nBwA,nW),nrow = 2),alternative = "greater")$p.value
+			ODDratioMat[levelOfA,levelOfB]<-(nAB*nW)/(nAwB*nBwA)
+		}	
+	}
+	return(list(nElement=confusionMat,propMatByRow=propMatA,propMatByCol=propMatB,propMatByRowByCol=propMatAB,OddsRatio=ODDratioMat,pval=pvalMat))
+}
+
+
+
+linkClusterCellPop<-function(cellClustersVector,experimentalPopVector,cellDonorVector){
+	resPerDonor<-linkLevelsOf2vector(cellClustersVector,cellDonorVector)
+	wilcox.test()
+}
+
+#useful for creating graph from UMAP res
+createIgraphFromKNN<-function(knn){
+	require(igraph)
+	n=nrow(knn)
+	edges<-as.vector(rbind(rep(1:n,each=ncol(knn)),as.vector(t(knn))))
+	make_undirected_graph(edges,n=n)
+}

@@ -201,7 +201,7 @@ pcaAddSamples<-function(pca,newSamplesMatrix,transpose=TRUE,combineMat=TRUE){
 }
 
 
-PCR<-function(pca,annotationDF,nComponant=10){
+PCR<-function(pca,annotationDF,nComponent=10){
 	require(reshape2)
 	annots<-colnames(annotationDF)
 	rSquaredMat<-matrixFromDimnames(cn(pca$x),annots,value = NA)
@@ -210,8 +210,8 @@ PCR<-function(pca,annotationDF,nComponant=10){
 			rSquaredMat[x,annot]<-summary(lm(formula(paste0(x,"~",annot)),data = data.frame(annotationDF[,annot,drop=F],pca$x[,x,drop=F])))$r.squared
 		}
 	}
-	retDt<-melt(rSquaredMat[1:nComponant,], value.name = "Rsquared",varnames=c("PC","Annotation"))
-	retDt$PC<-factor(retDt$PC,levels=cn(pca$x)[1:nComponant]) #so the levels of PCs are well ordered
+	retDt<-melt(rSquaredMat[1:nComponent,], value.name = "Rsquared",varnames=c("PC","Annotation"))
+	retDt$PC<-factor(retDt$PC,levels=cn(pca$x)[1:nComponent]) #so the levels of PCs are well ordered
 
 	retDt
 }
@@ -414,8 +414,8 @@ NMDS<-function(data,transpose=TRUE,scale=FALSE,center=FALSE,metric=dist,ndim=2,m
 proj2d<-function(coord,group=NULL,axis=1:2, pointSize=3, plotText=FALSE,main=NULL,alpha=9/10, 
 		ellipse=FALSE,emph=NULL,colorScale=NULL,returnGraph=FALSE,legendTitle="Values",axis.names=NULL,
 		na.color="grey50",na.bg=TRUE,obj=NULL,plotFactorsCentroids=FALSE,
-		pointStroke=1/8,funAutoColorScale=ggplotColours,fixedCoord=FALSE,plotLabelRepel=FALSE,labelSize=3,
-		sizeProp2Dens=FALSE,densEps=1){
+		pointStroke=1/8,strokeColor="black",funAutoColorScale=ggplotColours,fixedCoord=FALSE,plotLabelRepel=FALSE,labelSize=3,
+		sizeProp2Dens=FALSE,densEps=1,nnMatrix=NULL,nnSegmentParam=list(alpha=.75,size=.1)){
 	coord<-data.frame(coord)
 	if(is.null(coord)) coord<-obj$coord
 	if(!require("ggplot2")) stop("You must install ggplot2");
@@ -466,13 +466,26 @@ proj2d<-function(coord,group=NULL,axis=1:2, pointSize=3, plotText=FALSE,main=NUL
 		graph<-graph+do.call(funColorScaleFill,paramColorScale)
 		graph<-graph+do.call(funColorScaleColor,paramColorScale)
 	}
+	if(!is.null(nnMatrix)){
+		if(!is.matrix(nnMatrix)) stop("If nnMatrix is not null, it should be a matrix !")
+		retainCoord<-as.matrix(coord[,axis])
+		segmentsCoord<-data.frame(do.call("rbind",lapply(1:nrow(retainCoord),function(i){
+			t(vapply(nnMatrix[i,],FUN.VALUE = numeric(4),function(x){
+				c(retainCoord[i,],retainCoord[x,])
+			}))
+		})));colnames(segmentsCoord)<-c("x","y","xend","yend")
+		graph<-graph+do.call(
+			"geom_segment",
+			c(list(data = segmentsCoord,mapping = aes(x=x,y=y,xend=xend,yend=yend),inherit.aes = FALSE),nnSegmentParam)
+		)
+	}
 	if(plotText){
 		graph<-graph+geom_text(alpha=alpha,size=d$sizeMultiplier)
 	}else{
 		if(is.null(group)){
-			graph<-graph+geom_point(stroke=pointStroke,colour = "black",shape=21,alpha=alpha,fill="black",size=d$sizeMultiplier)
+			graph<-graph+geom_point(stroke=pointStroke,colour = strokeColor,shape=21,alpha=alpha,fill="black",size=d$sizeMultiplier)
 		}else{
-			graph<-graph+geom_point(stroke=pointStroke,colour = "black",shape=21,alpha=alpha,size=d$sizeMultiplier)
+			graph<-graph+geom_point(stroke=pointStroke,colour = strokeColor,shape=21,alpha=alpha,size=d$sizeMultiplier)
 		}	
 	}
 	if(plotLabelRepel){
@@ -490,6 +503,7 @@ proj2d<-function(coord,group=NULL,axis=1:2, pointSize=3, plotText=FALSE,main=NUL
 		centroids<-data.frame(t(sapply(samplePerFactor,function(x) colMeans(d[x,c("Axis1","Axis2")]))),groupName=names(samplePerFactor))
 		graph<-graph+geom_label(data = centroids,mapping = aes(x=Axis1, y=Axis2, label = groupName),inherit.aes = FALSE)
 	} 
+
 	graph<-graph+theme(
 		panel.background = element_rect(fill = NA,colour="black"),
 		panel.grid.major = element_line(colour = NA),
@@ -992,7 +1006,7 @@ qplotAutoX<-function(x,printGraph=TRUE,geom="point",...){
 }
 
 barplotPercentVar<-function(pca,printGraph=TRUE,...){
-	g<-qplotBarplot(pca$percentVar*200,printGraph = FALSE)+ylab("% variance explained")+xlab("Principal componant")+
+	g<-qplotBarplot(pca$percentVar*200,printGraph = FALSE)+ylab("% variance explained")+xlab("Principal component")+
 		scale_x_continuous(breaks = seq(1,length(pca$percentVar),by = 2))+
 		theme(
 			panel.background = element_rect(fill = NA,colour="black"),
