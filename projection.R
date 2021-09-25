@@ -508,13 +508,102 @@ proj2d<-function(coord,group=NULL,axis=1:2, pointSize=3, plotText=FALSE,main=NUL
 		panel.background = element_rect(fill = NA,colour="black"),
 		panel.grid.major = element_line(colour = NA),
 		panel.grid.minor = element_line(colour = NA)
-	) + guides(size=FALSE)
+	) + guides(size="none")
 	if(returnGraph){
 		return(graph)
 	}else{
 		print(graph)
 	}
 }
+
+
+proj1d<-function(variable,group=NULL, pointSize=3, plotText=FALSE,main=NULL,alpha=9/10, 
+								 ellipse=FALSE,emph=NULL,colorScale=NULL,returnGraph=FALSE,legendTitle="Values",variable.name="x",
+								 na.color="grey50",na.bg=TRUE,obj=NULL,plotFactorsCentroids=FALSE,
+								 pointStroke=1/8,strokeColor="black",funAutoColorScale=ggplotColours,fixedCoord=FALSE,plotLabelRepel=FALSE,labelSize=3,
+								 sizeProp2Dens=FALSE,densEps=1){
+	if(!is.numeric(variable)) stop("'variable' must be a numerical vector");
+	if(!require("ggplot2")) stop("You must install ggplot2");
+	
+	d <- data.frame(lab=names(variable),Axis1=variable, Axis2=0,sizeMultiplier=rep(pointSize,length(variable)));
+	if(sizeProp2Dens){
+		dens<-pointdensity.nrd(d[,c("Axis1","Axis2")],eps = densEps)
+		d$sizeMultiplier<-d$sizeMultiplier*(1-dens/max(dens))*2
+	}
+	if(is.null(group)){
+		graph<-ggplot(data=d, mapping = aes(x=Axis1, y=Axis2, label = lab))
+	}else{
+		if(is.data.frame(group) | is.matrix(group)){
+			if(!is.null(colnames(group))) legendTitle<- colnames(group)[1]
+			group<-group[,1]
+		}
+		
+		if(is.character(group)) group<-as.factor(group)
+		d$group<-group;
+		groupIsFactor<-is.factor(group)
+		if(!is.null(emph)){
+			if(!emph%in%levels(group)) stop("emph value not in levels of group")
+			d$group<-as.character(d$group)
+			d$group[which(d$group!=emph)]<-NA
+			d$group<-as.factor(d$group)
+			d$sizeMultiplier[which(d$group==emph)]<-d$sizeMultiplier[which(d$group==emph)]
+		}
+		if(na.bg){
+			indexNA<-which(is.na(d$group))
+			indexNotNA<-which(!is.na(d$group))
+			if(length(indexNA)>0){
+				tempd<-d
+				tempd[1:length(indexNA),]<-d[indexNA,]
+				tempd[(length(indexNA)+1):nrow(d),]<-d[indexNotNA,]
+				d<-tempd
+			}
+		}
+		graph<-ggplot(data=d, mapping = aes(x=Axis1, y=Axis2, label = lab,color=group,fill=group))
+		if(is.null(colorScale)){
+			colorScale<-c("grey","red")
+			if(groupIsFactor) colorScale<-funAutoColorScale(nlevels(group))
+		}
+		funColorScaleFill<-paste0("scale_fill_",ifelse(groupIsFactor,"manual","gradientn"))
+		funColorScaleColor<-paste0("scale_color_",ifelse(groupIsFactor,"manual","gradientn"))
+		paramColorScale<-list("name"=legendTitle,na.value=na.color)
+		paramColorScaleType<-ifelse(groupIsFactor,"values","colors");paramColorScale[[paramColorScaleType]]<-colorScale
+		graph<-graph+do.call(funColorScaleFill,paramColorScale)
+		graph<-graph+do.call(funColorScaleColor,paramColorScale)
+	}
+	if(plotText){
+		graph<-graph+geom_text(alpha=alpha,size=d$sizeMultiplier)
+	}else{
+		if(is.null(group)){
+			graph<-graph+geom_point(stroke=pointStroke,colour = strokeColor,shape=21,alpha=alpha,fill="black",size=d$sizeMultiplier)
+		}else{
+			graph<-graph+geom_point(stroke=pointStroke,colour = strokeColor,shape=21,alpha=alpha,size=d$sizeMultiplier)
+		}	
+	}
+	if(plotLabelRepel){
+		require(ggrepel)
+		graph<-graph+geom_text_repel(color="black",size=labelSize)
+	}
+	graph<-graph+xlab(variable.name)
+	if(!is.null(main)) graph <- graph + ggtitle(main)
+	if(ellipse) graph<-graph+stat_ellipse(size=.5)
+	if(fixedCoord)graph <- graph + coord_fixed()
+	if(plotFactorsCentroids){
+		samplePerFactor<-lapply(levels(group),function(x) which(group==x))
+		names(samplePerFactor)<-levels(group)
+		centroids<-data.frame(t(sapply(samplePerFactor,function(x) colMeans(d[x,c("Axis1","Axis2")]))),groupName=names(samplePerFactor))
+		graph<-graph+geom_label(data = centroids,mapping = aes(x=Axis1, y=Axis2, label = groupName),inherit.aes = FALSE)
+	} 
+	graph<-graph+theme(panel.background = element_blank(),
+				axis.text.y = element_blank(),
+				axis.ticks.y = element_blank(),
+				axis.title.y = element_blank()) + guides(size=FALSE)
+	if(returnGraph){
+		return(graph)
+	}else{
+		print(graph)
+	}
+}
+
 
 proj_densHex<-function(obj=NULL,coord=NULL, axis=1:2,group=NULL, main=NULL,bins=30,
  emph=NULL,colorScale=NULL,returnGraph=FALSE,legendTitle="Values",axis.names=NULL,na.color="grey50",na.bg=TRUE){

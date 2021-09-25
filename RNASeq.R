@@ -510,8 +510,8 @@ Enrich.gsea<-function(x, corrIdGenes=NULL,database=c("kegg","reactom","goBP","go
 	}
 	
 	if(class(x)!="numeric") stop("Values must be numerical")
-	if(is.null(db_terms)) db_terms<-getDBterms(geneSym=geneSym,geneEntrez=geneEntrez, corrIdGenes=corrIdGenes,database=database,
-																						 customAnnot=customAnnot,keggDisease=keggDisease,species=species,returnGenesSymbol = TRUE)
+	if(is.null(db_terms)) db_terms<-getDBterms2(geneSym=names(x), corrIdGenes=corrIdGenes,database=database,
+																						 customAnnot=customAnnot,keggDisease=keggDisease,species=species)
 	if(length(db_terms)==0) stop("Error, no term in any database was found")
 	res<-list()
 	for(db in names(db_terms)){
@@ -554,7 +554,7 @@ Enrich.simple<-function(x, corrIdGenes=NULL,database=c("kegg","reactom","goBP","
 	if(class(x)!="logical") stop("Values must be logical (TRUE or FALSE)")
 	if(class(names(x))!="character") stop("Values must be named with genes symbol")
 
-	if(is.null(db_terms)) db_terms<-getDBterms(geneSym=geneSym,geneEntrez=geneEntrez, corrIdGenes=corrIdGenes,database=database,customAnnot=customAnnot,keggDisease=keggDisease,species=species,returnGenesSymbol = TRUE)
+	if(is.null(db_terms)) db_terms<-getDBterms2(geneSym=names(x), corrIdGenes=corrIdGenes,database=database,customAnnot=customAnnot,keggDisease=keggDisease,species=species)
 
 	nInterest<-length(which(x))
 	nNotInterest<-length(which(!x))
@@ -1383,16 +1383,15 @@ linkLevelsOf2vector<-function(vectorA,vectorB){
 	return(list(nElement=confusionMat,propMatByRow=propMatA,propMatByCol=propMatB,propMatByRowByCol=propMatAB,OddsRatio=ODDratioMat,pval=pvalMat))
 }
 
-
-
 linkClusterCellPop<-function(cellClustersVector,experimentalPopVector,cellDonorVector){
 	resPerDonor<-linkLevelsOf2vector(cellClustersVector,cellDonorVector)
 	wilcox.test()
 }
 
 #useful for creating graph from UMAP res
-createIgraphFromKNN<-function(knn){
+createIgraphFromKNN<-function(knn,n_neighbors=ncol(knn)){
 	require(igraph)
+	knn<-knn[,1:n_neighbors]
 	n=nrow(knn)
 	edges<-as.vector(rbind(rep(1:n,each=ncol(knn)),as.vector(t(knn))))
 	make_undirected_graph(edges,n=n)

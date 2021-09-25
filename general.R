@@ -36,6 +36,9 @@ fastRead <- function(fileName, sep = '\t',row.names = 1,as.matrix=FALSE,stringsA
 
 fastWrite <- function(x, fileName = "default.tsv", headRow="Name",row.names=TRUE,col.names=TRUE, dec=".",sep="\t",...) {
 	require(data.table)
+	if(is.null(rownames(x))) row.names<-FALSE
+	if(is.null(colnames(x))) col.names<-FALSE
+	
 	if(row.names){
 		x=cbind(rownames(x),x)
 		colnames(x)[1]<-headRow
