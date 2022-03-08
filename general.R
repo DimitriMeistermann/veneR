@@ -633,6 +633,25 @@ intersectionEnrichment<-function(isInGroupMat){
 	real/expected
 }
 
+formatAnnotFromMeta<-function(annotDataFrame, metaAnnot){
+	colorScales=list()
+	for(feature in rn(metaAnnot)){
+		if(! feature %in% colnames(annotDataFrame))
+		annotDataFrame[,feature]<- do.call(paste0("as.",metaAnnot[feature,"Type"]),list(x=annotDataFrame[,feature]))
+		if(metaAnnot[feature,"colorScale"] != ""){
+			colorScale=strsplit(str_remove_all(metaAnnot[feature,"colorScale"]," "),split = ",")[[1]]
+			splitted=sapply(colorScale,strsplit,"=")
+			colorScales[[feature]]<-sapply(splitted,function(x) x[2])
+			names(colorScales[[feature]])<-sapply(splitted,function(x) x[1])
+			if(metaAnnot[feature,"Type"]=="factor"){
+				annotDataFrame[,feature]<-factor(annotDataFrame[,feature],levels = names(colorScales[[feature]]))
+			}
+		}
+	}
+	attr(annotDataFrame,"colorScales")<-colorScales
+	annotDataFrame
+}
+
 #<Alias
 rn<-rownames;
 cn<-colnames;

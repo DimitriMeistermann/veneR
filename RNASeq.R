@@ -1016,9 +1016,9 @@ heatmap.DM3<-function(matrix,preSet="expression",clustering_distance_rows=NULL,c
 normDeseq<-function(expr){
 	# PE = pseudo reference sample
 	PE<-apply(expr,1,gmean,keepZero=T)
-	PE<-PE[PE>0]
-	genes<-names(PE)
-	ratioMat<-sweep(expr[genes,],1,PE,"/")
+	keepedRow<-PE>0
+	PE<-PE[keepedRow]
+	ratioMat<-sweep(expr[keepedRow,],1,PE,"/")
 	normFactors<-apply(ratioMat,2,median)
 	sweep(expr,2,normFactors,"/")
 }
@@ -1395,4 +1395,11 @@ createIgraphFromKNN<-function(knn,n_neighbors=ncol(knn)){
 	n=nrow(knn)
 	edges<-as.vector(rbind(rep(1:n,each=ncol(knn)),as.vector(t(knn))))
 	make_undirected_graph(edges,n=n)
+}
+
+htLink<-function(mat,...){
+	heatmap.DM3(mat,preSet = "default",center = F,midColorIs0 = F,
+							colorScale = c("white","red"),showValues = T,
+							clustering_distance_columns = "pearson",clustering_distance_rows = "pearson",...)
+	
 }
