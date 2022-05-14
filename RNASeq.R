@@ -584,7 +584,7 @@ Enrich.simple<-function(x, corrIdGenes=NULL,database=c("kegg","reactom","goBP","
 }
 
 
-computeActivationScore<-function(expressionMatrix,corrIdGenes=NULL,
+computeActivationScore<-function(expressionMatrix,corrIdGenes=NULL,scaleScores=FALSE,centerScores=TRUE,
 			database=c("kegg","reactom","goBP","goCC","goMF"),
 			maxSize=500,minSize=2,nperm=1000,customAnnot=NULL,
 			keggDisease=FALSE,species="Human",db_terms=NULL,speciesData=NULL){
@@ -603,7 +603,7 @@ computeActivationScore<-function(expressionMatrix,corrIdGenes=NULL,
 		nGenePerTerm<-sapply(database,length)
 		database<-database[nGenePerTerm>minSize & nGenePerTerm<maxSize]
 		resPerPathway<-lapply(database,function(genesOfTerm){
-			eigengenes(expressionMatrix,genesOfTerm,returnContribution = TRUE)
+			eigengenes(exprMatrix = expressionMatrix,genes = genesOfTerm,returnContribution = TRUE,scale = scaleScores,center = centerScores)
 		})
 		list(
 			eigen=t(sapply(resPerPathway,function(term) term$eigen)),
@@ -1013,14 +1013,14 @@ heatmap.DM3<-function(matrix,preSet="expression",clustering_distance_rows=NULL,c
 }
 
 
-normDeseq<-function(expr){
-	# PE = pseudo reference sample
-	PE<-apply(expr,1,gmean,keepZero=T)
-	keepedRow<-PE>0
-	PE<-PE[keepedRow]
-	ratioMat<-sweep(expr[keepedRow,],1,PE,"/")
-	normFactors<-apply(ratioMat,2,median)
-	sweep(expr,2,normFactors,"/")
+normDeseq<-function(countMatrix){ #matrix where genes are rows and samples are columns
+	# PS = pseudo reference sample
+	PS<-apply(countMatrix,1,gmean,keepZero=TRUE) #get a vector which consist of the geometrical mean of each genes across all samples
+	keptRow<-PS>0 #get rid of genes containing one zero ore more
+	PS<-PS[keptRow]
+	ratioMat<-sweep(countMatrix[keptRow,],1,PS,"/") #get the ratio matrix (expression/expression from PS)
+	normFactors<-apply(ratioMat,2,median) #get the median of the ratios for each sample to get the normalization factors
+	sweep(countMatrix,2,normFactors,"/") #divide each sample by the corresponding normalization factor
 }
 
 testLinearModel<-function(exprData,sampleData,contrast){

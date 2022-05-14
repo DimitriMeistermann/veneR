@@ -170,3 +170,20 @@ trimap<-function(rdf,n_dims = 2,n_inliers = 10,n_outliers = 5,
 	
 }
 
+leidenClustFromUMAPmodel<-function(umapModel,n_neighbors=10,seed = 666,n_iterations=-1,resolution_parameter = 1,
+																	 laplacian = TRUE,clusterNamePrefix="k",convertFactor=TRUE,...){
+	# require(leiden)
+	require(igraph)
+	if(ncol(umapModel$nn[[1]]$idx) < n_neighbors){
+		stop("The provided umap model contains the data for ",ncol(umapModel$nn[[1]]$idx),
+			" neighbors, please decrease the n_neighbors parameter or recompute the model on a higher number of neighbors")
+	}
+	igraphObj<-createIgraphFromKNN(umapModel$nn[[1]]$idx,n_neighbors = n_neighbors)
+	clusterTemp<-leiden::leiden(igraphObj,seed = seed,n_iterations=n_iterations,resolution_parameter=resolution_parameter,laplacian=laplacian, ...)
+	clusterTemp<-paste0(clusterNamePrefix,formatNumber2Character(clusterTemp))
+	if(convertFactor){
+		as.factor(clusterTemp)
+	}else{
+		clusterTemp
+	}
+}

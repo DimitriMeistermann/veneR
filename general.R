@@ -51,11 +51,11 @@ write.vectorList <- function(list, filename,sep="\t",list.names=TRUE,vector.name
 	if( (!is.list(list))) stop("list must be a list")
 	sink(filename)
 	for(i in seq_along(list)){
-		if(! (is.null(names(list)) | (!list.names))) cat(names(list[i]),"\n")
+		if(! (is.null(names(list)) | (!list.names))) cat(names(list[i]),"\n",sep = "")
 		element<-list[[i]]
 		if(! (is.vector(element) | is.factor(element))) stop("each element of the list should be a vector")
-		if(! (is.null(names(element)) | (!vector.names))) cat(paste0(names(element),collapse = sep),"\n")
-		cat(paste0(as.character(element),collapse = sep),"\n")
+		if(! (is.null(names(element)) | (!vector.names))) cat(paste0(names(element),collapse = sep),"\n",sep = "")
+		cat(paste0(as.character(element),collapse = sep),"\n",sep = "")
 	}
 	sink()
 }
@@ -86,13 +86,13 @@ set_rand_state <- function(state) {
 }
 
 gmean<-function(x, keepZero=FALSE){ #geometrical mean
-  if(sum(x)==0) return(0)
-  if(!keepZero){
-    x<-x[x!=0]
-  }else{
-    if(length(which(x==0))>0) return(0)
-  }
-  exp( sum(log(x))/length(x) )
+	if(sum(x)==0) return(0)
+	if(!keepZero){
+		x<-x[x!=0]
+	}else{
+		if(length(which(x==0))>0) return(0)
+	}
+	return( exp( sum(log(x))/length(x) ) )
 }
 
 
@@ -208,6 +208,7 @@ LevenshteinDist<-function(vectA,vectB){
 }
 
 #Aggregation de ligne/colonne selon une variable qualitative
+#obsolete, see aggregate
 aggregCols<-function(dataframe,vector,fun=mean){ 
   vector<-as.factor(as.character(vector))
   #pour forcer le mise à jour de l'attribut levels
@@ -501,6 +502,7 @@ mostDistantColor<-function(n,rlimits=c(0,1),glimits=c(0,1),blimits=c(0,1),resolu
 
 mostDistantColor2<-function(n, colorspace = "rainbow", cvd = c("protan", "deutan","tritan"), cvd_severity = 0, n_threads = NULL){
 	require(qualpalr)
+	if(n==1) return("#000000")
 	qualpal(n=n, colorspace = colorspace, cvd = cvd, cvd_severity = cvd_severity, n_threads = n_threads)$hex
 }
 
@@ -650,6 +652,28 @@ formatAnnotFromMeta<-function(annotDataFrame, metaAnnot){
 	}
 	attr(annotDataFrame,"colorScales")<-colorScales
 	annotDataFrame
+}
+
+greps<-function(pattern, x, ignore.case = FALSE, perl = FALSE, value = FALSE,
+								fixed = FALSE, useBytes = FALSE, invert = FALSE){
+	x[grep(pattern, x, ignore.case = ignore.case, perl = perl, value = value,
+				 fixed = fixed, useBytes = useBytes, invert = invert)]
+}
+
+subSampleColumnPerGroup<-function(mat,groupVector,n=NULL){
+	lvlTable<-table(groupVector)
+	lvls<-names(lvlTable)
+	if(is.null(n)){
+		n<-min(lvlTable)
+	} else {
+		if(n > min(lvlTable)) stop("n superior to minimum level freq")
+	}
+	subSampledData<-lapply(lvls,function(lvl){
+		samples <-which(groupVector==lvl)
+		selected<-sample(samples,size = n)
+		mat[,selected]
+	});names(subSampledData)<-lvls
+	do.call("cbind",subSampledData)
 }
 
 #<Alias

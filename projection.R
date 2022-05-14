@@ -210,9 +210,13 @@ PCR<-function(pca,annotationDF,nComponent=10){
 			rSquaredMat[x,annot]<-summary(lm(formula(paste0(x,"~",annot)),data = data.frame(annotationDF[,annot,drop=F],pca$x[,x,drop=F])))$r.squared
 		}
 	}
-	retDt<-melt(rSquaredMat[1:nComponent,], value.name = "Rsquared",varnames=c("PC","Annotation"))
+	if(ncol(annotationDF)<2){
+		retDt<-data.frame(Rsquared=rSquaredMat[,1],PC=rownames(rSquaredMat),Annotation=colnames(annotationDF))
+	}else{
+		retDt<-melt(rSquaredMat[1:nComponent,], value.name = "Rsquared",varnames=c("PC","Annotation"))
+	}
+	
 	retDt$PC<-factor(retDt$PC,levels=cn(pca$x)[1:nComponent]) #so the levels of PCs are well ordered
-
 	retDt
 }
 	
