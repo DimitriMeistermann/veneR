@@ -1012,6 +1012,70 @@ heatmap.DM3<-function(matrix,preSet="expression",clustering_distance_rows=NULL,c
 	}
 }
 
+heatmapSquareMatrix<-function(matrix,clustering_distance="euclidean",clustering_method="ward.D2",
+			autoFontSizeRow=TRUE,autoFontSizeColumn=TRUE,scale=FALSE,center=FALSE,returnHeatmap=FALSE,name="Pearson\ncorrelation",
+			additionnalRowNamesGpar=list(),additionnalColNamesGpar=list(),border=TRUE,
+			colorScale=c("darkblue","white","#FFAA00"),colorScaleFun=NULL,midColorIs0=TRUE,probs=NULL,useProb=TRUE,minProb=0.05,maxProb=0.95,
+			cluster=NULL,cluster_columns=NULL,sampleAnnot=NULL,colorAnnot=NULL,showGrid=NULL,gparGrid=gpar(col="black"),showValues=FALSE,Nsignif=3, ...){
+	
+	require("ComplexHeatmap")
+	require("circlize")
+	
+	matrix<-as.matrix(matrix)
+	args<-list()
+	if(is.null(cluster)){
+		cluster<-unsupervisedClustering(matrix,transpose = FALSE,method.dist = clustering_distance,method.hclust = clustering_method)
+	}
+	args$cluster_rows<-cluster
+	args$cluster_columns<-cluster
+
+	if(min(apply(matrix,1,sd))==0 & scale ){
+		warning("some row have a 0 sd. sd-based method (correlation distance, scaling) will be desactivated or switched.")
+		scale=FALSE
+	}
+	
+	if(scale | center) matrix<-rowScale(matrix,scaled=scale,center=center)
+	if(is.null(colorScaleFun)){
+		colorScaleFun<-computeColorScaleFun(colors = colorScale,values = unlist(matrix),useProb = useProb,probs = probs,minProb = minProb,
+																				maxProb = maxProb, midColorIs0 = midColorIs0,returnColorFun = TRUE)
+	}
+	args$col<-colorScaleFun
+	if(is.null(showGrid)){
+		if(nrow(matrix)*ncol(matrix)<500){
+			showGrid = TRUE
+		}else{
+			showGrid = FALSE
+		}
+	}
+	if(showGrid){
+		args$rect_gp = gparGrid
+	}
+	if(showValues){
+		args$cell_fun = function(j, i, x, y, w, h, col) {
+			#dark or light background .
+			if(colSums(col2rgb(col))<382.5) col="white" else col="black" 
+			grid.text(as.character(signif(matrix[i,j],Nsignif)),x,y,gp=gpar(col=col))
+		}
+	}
+	if(autoFontSizeRow) args$row_names_gp=do.call("autoGparFontSizeMatrix",c(list(nrow(matrix)),additionnalRowNamesGpar))
+	if(autoFontSizeColumn) args$column_names_gp=do.call("autoGparFontSizeMatrix",c(list(ncol(matrix)),additionnalColNamesGpar))
+	
+	if(!is.null(sampleAnnot)){
+		args$top_annotation<-genTopAnnot(sampleAnnot,colorAnnot)
+	}
+	
+	args$matrix<-matrix
+	args$name=name
+	args$border<-border
+	args<-c(args,list(...))
+	
+	ht<-do.call("Heatmap",args)
+	if(returnHeatmap){
+		return(ht)
+	}else{
+		print(ht)
+	}
+}
 
 normDeseq<-function(countMatrix){ #matrix where genes are rows and samples are columns
 	# PS = pseudo reference sample
@@ -1149,6 +1213,32 @@ getMostVariableGenes4<-function(counts,minCount=0.01,plot=TRUE,returnPlot=FALSE)
 	dispTable
 }
 
+getMostVariableGenesLogCount<-function(logCounts,minCount=0,plot=TRUE,returnPlot=FALSE){
+	if(minCount>0) logCounts<-logCounts[rowMeans(logCounts)>minCount,]
+	dispTable<-data.frame(mu=rowMeans(logCounts),var=apply(logCounts,1,var),row.names =rownames(logCounts))
+	
+	fit<-loess(var~mu,data = dispTable)
+	if(length(rownames(fit$x)) < nrow(dispTable)){
+		warning(nrow(dispTable)-length(rownames(fit$x))," genes have null variance and will be removed")
+	}
+	dispTable<-dispTable[rownames(fit$x),]
+	dispTable$residuals<-fit$residuals
+	dispTable$fitted<-fit$fitted
+	
+	if(plot){
+		require(ggplot2)
+		require(ggrepel)
+		require(circlize)
+		g<-ggplot(dispTable,aes(x=mu,y=var,label=rownames(dispTable),fill=residuals))+
+			geom_point(stroke=1/8,colour = "black",shape=21)+geom_line(aes(y=fitted),color="red",size=1.5)
+		if(returnPlot){
+			return(g)
+		}else{
+			print(g)
+		}
+	}
+	dispTable
+}
 
 
 getMarkers<-function(expressionMatrix,annotation){

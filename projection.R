@@ -141,19 +141,16 @@ PCA<-function(d,transpose=T,scale=F,center=T) {
 
 ACP<-PCA
 
-fastPCA <- function(d,transpose=T,scale=F,center=T,nPC=NULL,
+fastPCA <- function(d,transpose=TRUE,scale=FALSE,center=TRUE,nPC=NULL,
 		weight.by.var = TRUE, ...) {
 	require(irlba)
 	if(transpose) d<-t(d);
+	d<-as.matrix(d)
 	means<-0;sdeviations<-1
-	if(center){
-		means<-apply(d,2,mean)
-		d<-sweep(d,2,means,"-")
-	}
-	if(scale){
-		sdeviations<-apply(d,2,sd)
-		d<-sweep(d,2,sdeviations,"/")
-	}
+	if(center | scale) d<-scale(d,scale = scale,center = center)
+	if(center) means<-attr(d,"scaled:center")
+	if(scale) sdeviations<-attr(d,"scaled:scale")
+	
 	if(is.null(nPC | nPC>=min(nrow(d),ncol(d)))) {
 		nPC <- min(ncol(d) - 1, nrow(d) -1)
 	}
@@ -1099,7 +1096,7 @@ qplotAutoX<-function(x,printGraph=TRUE,geom="point",...){
 }
 
 barplotPercentVar<-function(pca,printGraph=TRUE,...){
-	g<-qplotBarplot(pca$percentVar*200,printGraph = FALSE)+ylab("% variance explained")+xlab("Principal component")+
+	g<-qplotBarplot(pca$percentVar*100,printGraph = FALSE)+ylab("% variance explained")+xlab("Principal component")+
 		scale_x_continuous(breaks = seq(1,length(pca$percentVar),by = 2))+
 		theme(
 			panel.background = element_rect(fill = NA,colour="black"),
